@@ -177,6 +177,13 @@ export default function DashboardPage() {
 >
   Orders
 </a>
+<a
+  href="/audit-logs"
+  className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
+>
+  Audit Logs
+</a>
+
             <a
               href="/"
               className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"

@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_debug: bool = True
 
-    secret_key: str = "change_this_secret_key"
+    secret_key: str = "dev_secret_key_change_me_minimum_32_characters"
     access_token_expire_minutes: int = 60
     algorithm: str = "HS256"
 

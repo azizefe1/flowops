@@ -54,6 +54,9 @@ export default function Home() {
               <a href="#stack" className="hover:text-white">
                 Tech Stack
               </a>
+		<a href="/login" className="hover:text-white">
+                  Login
+              </a>
               <a
                 href="https://github.com/azizefe1/flowops"
                 target="_blank"

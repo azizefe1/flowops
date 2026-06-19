@@ -1,5 +1,7 @@
 # FlowOps
 
+[![Backend CI](https://github.com/azizefe1/flowops/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/azizefe1/flowops/actions/workflows/backend-ci.yml)
+
 FlowOps is a multi-tenant B2B operations platform built with FastAPI, PostgreSQL, SQLAlchemy, Alembic, JWT authentication, and Docker.
 
 The project is designed as a portfolio-level backend system that demonstrates real-world business operations such as organization management, product management, inventory tracking, order processing, dashboard reporting, audit logging, and automated API testing.

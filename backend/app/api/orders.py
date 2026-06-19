@@ -1,0 +1,235 @@
+import uuid
+from datetime import datetime
+from decimal import Decimal
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session, joinedload
+
+from app.api.auth import get_current_user
+from app.api.organizations import get_membership_or_404
+from app.db.session import get_db
+from app.models.inventory_movement import InventoryMovement, InventoryMovementType
+from app.models.order import Order, OrderItem, OrderStatus
+from app.models.product import Product
+from app.models.user import User
+from app.schemas.order import OrderCreate, OrderResponse, OrderStatusUpdate
+
+
+router = APIRouter(
+    prefix="/api/organizations/{organization_id}/orders",
+    tags=["orders"],
+)
+
+
+def generate_order_number() -> str:
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    random_part = str(uuid.uuid4())[:8].upper()
+    return f"ORD-{timestamp}-{random_part}"
+
+
+def get_order_or_404(
+    db: Session,
+    organization_id: uuid.UUID,
+    order_id: uuid.UUID,
+) -> Order:
+    order = (
+        db.query(Order)
+        .options(joinedload(Order.items))
+        .filter(
+            Order.id == order_id,
+            Order.organization_id == organization_id,
+        )
+        .first()
+    )
+
+    if order is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found",
+        )
+
+    return order
+
+
+@router.post("", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
+def create_order(
+    organization_id: uuid.UUID,
+    payload: OrderCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Order:
+    get_membership_or_404(db, organization_id, current_user.id)
+
+    product_ids = [item.product_id for item in payload.items]
+
+    if len(product_ids) != len(set(product_ids)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Duplicate products are not allowed in the same order",
+        )
+
+    order_number = generate_order_number()
+
+    order = Order(
+        organization_id=organization_id,
+        order_number=order_number,
+        customer_name=payload.customer_name,
+        customer_email=str(payload.customer_email) if payload.customer_email else None,
+        status=OrderStatus.pending,
+        total_amount=Decimal("0.00"),
+        created_by=current_user.id,
+    )
+
+    db.add(order)
+    db.flush()
+
+    total_amount = Decimal("0.00")
+
+    for item in payload.items:
+        product = (
+            db.query(Product)
+            .filter(
+                Product.id == item.product_id,
+                Product.organization_id == organization_id,
+                Product.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if product is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Product not found: {item.product_id}",
+            )
+
+        if item.quantity > product.stock_quantity:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Insufficient stock for product: {product.name}",
+            )
+
+        previous_stock = product.stock_quantity
+        new_stock = previous_stock - item.quantity
+
+        product.stock_quantity = new_stock
+
+        line_total = product.unit_price * Decimal(item.quantity)
+        total_amount += line_total
+
+        order_item = OrderItem(
+            order_id=order.id,
+            product_id=product.id,
+            quantity=item.quantity,
+            unit_price=product.unit_price,
+            line_total=line_total,
+        )
+
+        movement = InventoryMovement(
+            organization_id=organization_id,
+            product_id=product.id,
+            movement_type=InventoryMovementType.stock_out,
+            quantity=item.quantity,
+            previous_stock=previous_stock,
+            new_stock=new_stock,
+            reason=f"Order created: {order_number}",
+            created_by=current_user.id,
+        )
+
+        db.add(order_item)
+        db.add(movement)
+
+    order.total_amount = total_amount
+
+    db.commit()
+    db.refresh(order)
+
+    return get_order_or_404(db, organization_id, order.id)
+
+
+@router.get("", response_model=list[OrderResponse])
+def list_orders(
+    organization_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[Order]:
+    get_membership_or_404(db, organization_id, current_user.id)
+
+    orders = (
+        db.query(Order)
+        .options(joinedload(Order.items))
+        .filter(Order.organization_id == organization_id)
+        .order_by(Order.created_at.desc())
+        .all()
+    )
+
+    return orders
+
+
+@router.get("/{order_id}", response_model=OrderResponse)
+def get_order(
+    organization_id: uuid.UUID,
+    order_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Order:
+    get_membership_or_404(db, organization_id, current_user.id)
+
+    return get_order_or_404(db, organization_id, order_id)
+
+
+@router.patch("/{order_id}/status", response_model=OrderResponse)
+def update_order_status(
+    organization_id: uuid.UUID,
+    order_id: uuid.UUID,
+    payload: OrderStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Order:
+    get_membership_or_404(db, organization_id, current_user.id)
+
+    order = get_order_or_404(db, organization_id, order_id)
+
+    if order.status == OrderStatus.cancelled:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cancelled order status cannot be changed",
+        )
+
+    if payload.status == OrderStatus.cancelled:
+        for item in order.items:
+            product = (
+                db.query(Product)
+                .filter(
+                    Product.id == item.product_id,
+                    Product.organization_id == organization_id,
+                )
+                .first()
+            )
+
+            if product is None:
+                continue
+
+            previous_stock = product.stock_quantity
+            new_stock = previous_stock + item.quantity
+
+            product.stock_quantity = new_stock
+
+            movement = InventoryMovement(
+                organization_id=organization_id,
+                product_id=product.id,
+                movement_type=InventoryMovementType.stock_in,
+                quantity=item.quantity,
+                previous_stock=previous_stock,
+                new_stock=new_stock,
+                reason=f"Order cancelled: {order.order_number}",
+                created_by=current_user.id,
+            )
+
+            db.add(movement)
+
+    order.status = payload.status
+
+    db.commit()
+    db.refresh(order)
+
+    return get_order_or_404(db, organization_id, order.id)

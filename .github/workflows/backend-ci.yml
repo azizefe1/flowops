@@ -1,0 +1,71 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  backend-tests:
+    name: Run Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: flowops_user
+          POSTGRES_PASSWORD: flowops_password
+          POSTGRES_DB: flowops_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U flowops_user -d flowops_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    env:
+      APP_NAME: FlowOps
+      APP_ENV: test
+      DATABASE_URL: postgresql+psycopg://flowops_user:flowops_password@localhost:5432/flowops_db
+      SECRET_KEY: dev_secret_key_change_me_minimum_32_characters
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run database migrations
+        working-directory: backend
+        run: |
+          alembic upgrade head
+
+      - name: Run Python compile check
+        working-directory: backend
+        run: |
+          python -m py_compile app/main.py app/api/auth.py app/api/organizations.py app/api/products.py app/api/inventory.py app/api/orders.py app/api/dashboard.py app/api/audit_logs.py
+
+      - name: Run tests
+        working-directory: backend
+        run: |
+          pytest

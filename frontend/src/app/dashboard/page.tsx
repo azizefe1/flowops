@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { AppShell } from "@/components/AppShell";
 import { apiRequest } from "@/lib/api";
-import { getToken, removeToken } from "@/lib/auth";
+import { getToken } from "@/lib/auth";
 
 type Organization = {
   id: string;
@@ -111,11 +112,6 @@ export default function DashboardPage() {
     loadDashboard();
   }, [router]);
 
-  function handleLogout() {
-    removeToken();
-    router.push("/login");
-  }
-
   const cards = [
     {
       label: "Total Products",
@@ -152,176 +148,127 @@ export default function DashboardPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-8 text-white">
-      <div className="mx-auto max-w-7xl">
-        <nav className="flex items-center justify-between border-b border-white/10 pb-6">
-          <div>
-            <h1 className="text-2xl font-bold">FlowOps Dashboard</h1>
-            <p className="text-sm text-slate-400">
-              {organization
-                ? organization.name
-                : "Backend connected dashboard"}
-            </p>
+    <AppShell
+      title="FlowOps Dashboard"
+      subtitle={organization ? organization.name : "Backend connected dashboard"}
+    >
+      {isLoading ? (
+        <section className="py-12">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8">
+            <p className="text-slate-300">Loading dashboard data...</p>
           </div>
-
-          <div className="flex items-center gap-3">
-		<a
-  href="/products"
-  className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
->
-  Products
-</a>
-<a
-  href="/orders"
-  className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
->
-  Orders
-</a>
-<a
-  href="/audit-logs"
-  className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
->
-  Audit Logs
-</a>
-
-            <a
-              href="/"
-              className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
-            >
-              Home
-            </a>
-
-            <button
-              onClick={handleLogout}
-              className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
-            >
-              Logout
-            </button>
+        </section>
+      ) : errorMessage ? (
+        <section className="py-12">
+          <div className="rounded-3xl border border-red-400/20 bg-red-400/10 p-8 text-red-200">
+            {errorMessage}
           </div>
-        </nav>
+        </section>
+      ) : (
+        <>
+          <section className="py-10">
+            <div className="rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-8">
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-300">
+                Live Backend Data
+              </p>
 
-        {isLoading ? (
-          <section className="py-12">
-            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8">
-              <p className="text-slate-300">Loading dashboard data...</p>
-            </div>
-          </section>
-        ) : errorMessage ? (
-          <section className="py-12">
-            <div className="rounded-3xl border border-red-400/20 bg-red-400/10 p-8 text-red-200">
-              {errorMessage}
-            </div>
-          </section>
-        ) : (
-          <>
-            <section className="py-10">
-              <div className="rounded-3xl border border-cyan-400/20 bg-cyan-400/10 p-8">
-                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-300">
-                  Live Backend Data
-                </p>
+              <h2 className="mt-4 text-4xl font-bold">Operations Summary</h2>
 
-                <h2 className="mt-4 text-4xl font-bold">
-                  Operations Summary
-                </h2>
+              <p className="mt-4 max-w-2xl leading-7 text-slate-300">
+                This dashboard fetches organization and summary data directly
+                from the FastAPI backend using the saved JWT access token.
+              </p>
 
-                <p className="mt-4 max-w-2xl leading-7 text-slate-300">
-                  This dashboard fetches organization and summary data directly
-                  from the FastAPI backend using the saved JWT access token.
-                </p>
-
-                <div className="mt-6 inline-flex rounded-xl border border-white/10 bg-slate-950/60 px-5 py-3 text-sm text-slate-300">
-                  Total Order Value:{" "}
-                  <span className="ml-2 font-semibold text-cyan-300">
-                    {dashboard.total_order_value}
-                  </span>
-                </div>
+              <div className="mt-6 inline-flex rounded-xl border border-white/10 bg-slate-950/60 px-5 py-3 text-sm text-slate-300">
+                Total Order Value:{" "}
+                <span className="ml-2 font-semibold text-cyan-300">
+                  {dashboard.total_order_value}
+                </span>
               </div>
-            </section>
+            </div>
+          </section>
 
-            <section className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-              {cards.map((card) => (
-                <div
-                  key={card.label}
-                  className="rounded-3xl border border-white/10 bg-white/[0.04] p-6"
-                >
-                  <p className="text-sm text-slate-400">{card.label}</p>
-                  <p className="mt-3 text-3xl font-bold text-white">
-                    {card.value}
+          <section className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+            {cards.map((card) => (
+              <div
+                key={card.label}
+                className="rounded-3xl border border-white/10 bg-white/[0.04] p-6"
+              >
+                <p className="text-sm text-slate-400">{card.label}</p>
+                <p className="mt-3 text-3xl font-bold text-white">
+                  {card.value}
+                </p>
+              </div>
+            ))}
+          </section>
+
+          <section className="grid gap-6 py-10 lg:grid-cols-2">
+            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+              <h3 className="text-xl font-semibold">Recent Orders</h3>
+
+              <div className="mt-6 space-y-4">
+                {dashboard.recent_orders.length > 0 ? (
+                  dashboard.recent_orders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 p-4"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-medium">{order.order_number}</p>
+                          <p className="text-sm text-slate-400">
+                            {order.customer_name}
+                          </p>
+                        </div>
+
+                        <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-sm text-cyan-300">
+                          {order.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-400">
+                    No recent orders found.
                   </p>
-                </div>
-              ))}
-            </section>
-
-            <section className="grid gap-6 py-10 lg:grid-cols-2">
-              <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
-                <h3 className="text-xl font-semibold">Recent Orders</h3>
-
-                <div className="mt-6 space-y-4">
-                  {dashboard.recent_orders.length > 0 ? (
-                    dashboard.recent_orders.map((order) => (
-                      <div
-                        key={order.id}
-                        className="rounded-2xl border border-white/10 bg-slate-900/70 p-4"
-                      >
-                        <div className="flex items-center justify-between gap-4">
-                          <div>
-                            <p className="font-medium">
-                              {order.order_number}
-                            </p>
-                            <p className="text-sm text-slate-400">
-                              {order.customer_name}
-                            </p>
-                          </div>
-
-                          <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-sm text-cyan-300">
-                            {order.status}
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-slate-400">
-                      No recent orders found.
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
+            </div>
 
-              <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
-                <h3 className="text-xl font-semibold">Low Stock Items</h3>
+            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+              <h3 className="text-xl font-semibold">Low Stock Items</h3>
 
-                <div className="mt-6 space-y-4">
-                  {dashboard.low_stock_items.length > 0 ? (
-                    dashboard.low_stock_items.map((item) => (
-                      <div
-                        key={item.id}
-                        className="rounded-2xl border border-white/10 bg-slate-900/70 p-4"
-                      >
-                        <div className="flex items-center justify-between gap-4">
-                          <div>
-                            <p className="font-medium">{item.name}</p>
-                            <p className="text-sm text-slate-400">
-                              SKU: {item.sku}
-                            </p>
-                          </div>
-
-                          <span className="rounded-full bg-red-400/10 px-3 py-1 text-sm text-red-200">
-                            {item.stock_quantity} left
-                          </span>
+              <div className="mt-6 space-y-4">
+                {dashboard.low_stock_items.length > 0 ? (
+                  dashboard.low_stock_items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 p-4"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-medium">{item.name}</p>
+                          <p className="text-sm text-slate-400">
+                            SKU: {item.sku}
+                          </p>
                         </div>
+
+                        <span className="rounded-full bg-red-400/10 px-3 py-1 text-sm text-red-200">
+                          {item.stock_quantity} left
+                        </span>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-slate-400">
-                      No low stock items found.
-                    </p>
-                  )}
-                </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-400">
+                    No low stock items found.
+                  </p>
+                )}
               </div>
-            </section>
-          </>
-        )}
-      </div>
-    </main>
+            </div>
+          </section>
+        </>
+      )}
+    </AppShell>
   );
 }

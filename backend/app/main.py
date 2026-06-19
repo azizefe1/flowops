@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.api.auth import router as auth_router
 from app.core.config import settings
 from app.db.session import check_database_connection
 
@@ -9,6 +10,9 @@ app = FastAPI(
     version="0.1.0",
     description="FlowOps API - Multi-tenant B2B operations platform",
 )
+
+
+app.include_router(auth_router)
 
 
 @app.get("/")

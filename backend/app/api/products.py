@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -10,12 +10,36 @@ from app.db.session import get_db
 from app.models.product import Product
 from app.models.user import User
 from app.schemas.product import ProductCreate, ProductResponse, ProductUpdate
+from app.services.audit import create_audit_log
 
 
 router = APIRouter(
     prefix="/api/organizations/{organization_id}/products",
     tags=["products"],
 )
+
+
+def get_product_or_404(
+    db: Session,
+    organization_id: uuid.UUID,
+    product_id: uuid.UUID,
+) -> Product:
+    product = (
+        db.query(Product)
+        .filter(
+            Product.id == product_id,
+            Product.organization_id == organization_id,
+        )
+        .first()
+    )
+
+    if product is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product not found",
+        )
+
+    return product
 
 
 @router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
@@ -41,7 +65,7 @@ def create_product(
     db.add(product)
 
     try:
-        db.commit()
+        db.flush()
     except IntegrityError:
         db.rollback()
         raise HTTPException(
@@ -49,6 +73,22 @@ def create_product(
             detail="A product with this SKU already exists in this organization",
         )
 
+    create_audit_log(
+        db=db,
+        organization_id=organization_id,
+        user_id=current_user.id,
+        action="product.created",
+        entity_type="product",
+        entity_id=product.id,
+        details={
+            "name": product.name,
+            "sku": product.sku,
+            "unit_price": str(product.unit_price),
+            "stock_quantity": product.stock_quantity,
+        },
+    )
+
+    db.commit()
     db.refresh(product)
 
     return product
@@ -57,27 +97,19 @@ def create_product(
 @router.get("", response_model=list[ProductResponse])
 def list_products(
     organization_id: uuid.UUID,
-    search: str | None = Query(default=None),
-    include_inactive: bool = Query(default=False),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[Product]:
     get_membership_or_404(db, organization_id, current_user.id)
 
-    query = db.query(Product).filter(Product.organization_id == organization_id)
+    products = (
+        db.query(Product)
+        .filter(Product.organization_id == organization_id)
+        .order_by(Product.created_at.desc())
+        .all()
+    )
 
-    if not include_inactive:
-        query = query.filter(Product.is_active.is_(True))
-
-    if search:
-        search_pattern = f"%{search}%"
-        query = query.filter(
-            Product.name.ilike(search_pattern)
-            | Product.sku.ilike(search_pattern)
-            | Product.category.ilike(search_pattern)
-        )
-
-    return query.order_by(Product.created_at.desc()).all()
+    return products
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
@@ -89,22 +121,7 @@ def get_product(
 ) -> Product:
     get_membership_or_404(db, organization_id, current_user.id)
 
-    product = (
-        db.query(Product)
-        .filter(
-            Product.id == product_id,
-            Product.organization_id == organization_id,
-        )
-        .first()
-    )
-
-    if product is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Product not found",
-        )
-
-    return product
+    return get_product_or_404(db, organization_id, product_id)
 
 
 @router.put("/{product_id}", response_model=ProductResponse)
@@ -117,28 +134,15 @@ def update_product(
 ) -> Product:
     get_membership_or_404(db, organization_id, current_user.id)
 
-    product = (
-        db.query(Product)
-        .filter(
-            Product.id == product_id,
-            Product.organization_id == organization_id,
-        )
-        .first()
-    )
-
-    if product is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Product not found",
-        )
+    product = get_product_or_404(db, organization_id, product_id)
 
     update_data = payload.model_dump(exclude_unset=True)
 
-    for field, value in update_data.items():
-        setattr(product, field, value)
+    for key, value in update_data.items():
+        setattr(product, key, value)
 
     try:
-        db.commit()
+        db.flush()
     except IntegrityError:
         db.rollback()
         raise HTTPException(
@@ -146,6 +150,21 @@ def update_product(
             detail="A product with this SKU already exists in this organization",
         )
 
+    create_audit_log(
+        db=db,
+        organization_id=organization_id,
+        user_id=current_user.id,
+        action="product.updated",
+        entity_type="product",
+        entity_id=product.id,
+        details={
+            "updated_fields": {
+                key: str(value) for key, value in update_data.items()
+            }
+        },
+    )
+
+    db.commit()
     db.refresh(product)
 
     return product
@@ -160,22 +179,22 @@ def delete_product(
 ) -> Product:
     get_membership_or_404(db, organization_id, current_user.id)
 
-    product = (
-        db.query(Product)
-        .filter(
-            Product.id == product_id,
-            Product.organization_id == organization_id,
-        )
-        .first()
-    )
-
-    if product is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Product not found",
-        )
+    product = get_product_or_404(db, organization_id, product_id)
 
     product.is_active = False
+
+    create_audit_log(
+        db=db,
+        organization_id=organization_id,
+        user_id=current_user.id,
+        action="product.deactivated",
+        entity_type="product",
+        entity_id=product.id,
+        details={
+            "name": product.name,
+            "sku": product.sku,
+        },
+    )
 
     db.commit()
     db.refresh(product)

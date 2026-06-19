@@ -1,25 +1,13 @@
 import re
-
-from sqlalchemy.orm import Session
-
-from app.models.organization import Organization
+import unicodedata
 
 
-def slugify(value: str) -> str:
-    value = value.lower().strip()
-    value = re.sub(r"[^a-z0-9]+", "-", value)
-    value = value.strip("-")
+def generate_slug(text: str) -> str:
+    normalized_text = unicodedata.normalize("NFKD", text)
+    ascii_text = normalized_text.encode("ascii", "ignore").decode("ascii")
 
-    return value or "organization"
+    slug = ascii_text.lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", slug)
+    slug = slug.strip("-")
 
-
-def generate_unique_organization_slug(db: Session, name: str) -> str:
-    base_slug = slugify(name)
-    slug = base_slug
-    counter = 1
-
-    while db.query(Organization).filter(Organization.slug == slug).first():
-        slug = f"{base_slug}-{counter}"
-        counter += 1
-
-    return slug
+    return slug or "organization"

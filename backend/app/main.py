@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.api.audit_logs import router as audit_logs_router
 from app.api.auth import router as auth_router
 from app.api.dashboard import router as dashboard_router
 from app.api.inventory import router as inventory_router
@@ -23,6 +24,7 @@ app.include_router(products_router)
 app.include_router(inventory_router)
 app.include_router(orders_router)
 app.include_router(dashboard_router)
+app.include_router(audit_logs_router)
 
 
 @app.get("/")

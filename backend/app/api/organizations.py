@@ -1,6 +1,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
@@ -8,15 +9,15 @@ from app.db.session import get_db
 from app.models.organization import Organization
 from app.models.organization_member import OrganizationMember, OrganizationRole
 from app.models.user import User
-from app.schemas.organization import (
-    OrganizationCreate,
-    OrganizationMemberResponse,
-    OrganizationResponse,
+from app.schemas.organization import OrganizationCreate, OrganizationResponse
+from app.services.audit import create_audit_log
+from app.services.slug import generate_slug
+
+
+router = APIRouter(
+    prefix="/api/organizations",
+    tags=["organizations"],
 )
-from app.services.slug import generate_unique_organization_slug
-
-
-router = APIRouter(prefix="/api/organizations", tags=["organizations"])
 
 
 def get_membership_or_404(
@@ -48,7 +49,7 @@ def create_organization(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Organization:
-    slug = generate_unique_organization_slug(db, payload.name)
+    slug = generate_slug(payload.name)
 
     organization = Organization(
         name=payload.name,
@@ -56,15 +57,37 @@ def create_organization(
     )
 
     db.add(organization)
-    db.flush()
+
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An organization with this name already exists",
+        )
 
     membership = OrganizationMember(
-        user_id=current_user.id,
         organization_id=organization.id,
+        user_id=current_user.id,
         role=OrganizationRole.owner,
     )
 
     db.add(membership)
+
+    create_audit_log(
+        db=db,
+        organization_id=organization.id,
+        user_id=current_user.id,
+        action="organization.created",
+        entity_type="organization",
+        entity_id=organization.id,
+        details={
+            "name": organization.name,
+            "slug": organization.slug,
+        },
+    )
+
     db.commit()
     db.refresh(organization)
 
@@ -78,7 +101,10 @@ def list_organizations(
 ) -> list[Organization]:
     organizations = (
         db.query(Organization)
-        .join(OrganizationMember)
+        .join(
+            OrganizationMember,
+            OrganizationMember.organization_id == Organization.id,
+        )
         .filter(OrganizationMember.user_id == current_user.id)
         .order_by(Organization.created_at.desc())
         .all()
@@ -95,7 +121,11 @@ def get_organization(
 ) -> Organization:
     get_membership_or_404(db, organization_id, current_user.id)
 
-    organization = db.get(Organization, organization_id)
+    organization = (
+        db.query(Organization)
+        .filter(Organization.id == organization_id)
+        .first()
+    )
 
     if organization is None:
         raise HTTPException(
@@ -104,21 +134,3 @@ def get_organization(
         )
 
     return organization
-
-
-@router.get("/{organization_id}/members", response_model=list[OrganizationMemberResponse])
-def list_organization_members(
-    organization_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> list[OrganizationMember]:
-    get_membership_or_404(db, organization_id, current_user.id)
-
-    members = (
-        db.query(OrganizationMember)
-        .filter(OrganizationMember.organization_id == organization_id)
-        .order_by(OrganizationMember.created_at.asc())
-        .all()
-    )
-
-    return members

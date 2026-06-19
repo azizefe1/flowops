@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
 from app.api.organizations import get_membership_or_404
@@ -13,6 +13,7 @@ from app.models.order import Order, OrderItem, OrderStatus
 from app.models.product import Product
 from app.models.user import User
 from app.schemas.order import OrderCreate, OrderResponse, OrderStatusUpdate
+from app.services.audit import create_audit_log
 
 
 router = APIRouter(
@@ -23,7 +24,8 @@ router = APIRouter(
 
 def generate_order_number() -> str:
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-    random_part = str(uuid.uuid4())[:8].upper()
+    random_part = str(uuid.uuid4()).split("-")[0].upper()
+
     return f"ORD-{timestamp}-{random_part}"
 
 
@@ -34,7 +36,6 @@ def get_order_or_404(
 ) -> Order:
     order = (
         db.query(Order)
-        .options(joinedload(Order.items))
         .filter(
             Order.id == order_id,
             Order.organization_id == organization_id,
@@ -68,13 +69,29 @@ def create_order(
             detail="Duplicate products are not allowed in the same order",
         )
 
-    order_number = generate_order_number()
+    products = (
+        db.query(Product)
+        .filter(
+            Product.organization_id == organization_id,
+            Product.id.in_(product_ids),
+            Product.is_active.is_(True),
+        )
+        .all()
+    )
+
+    products_by_id = {product.id: product for product in products}
+
+    if len(products_by_id) != len(product_ids):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="One or more products were not found",
+        )
 
     order = Order(
         organization_id=organization_id,
-        order_number=order_number,
+        order_number=generate_order_number(),
         customer_name=payload.customer_name,
-        customer_email=str(payload.customer_email) if payload.customer_email else None,
+        customer_email=payload.customer_email,
         status=OrderStatus.pending,
         total_amount=Decimal("0.00"),
         created_by=current_user.id,
@@ -86,23 +103,9 @@ def create_order(
     total_amount = Decimal("0.00")
 
     for item in payload.items:
-        product = (
-            db.query(Product)
-            .filter(
-                Product.id == item.product_id,
-                Product.organization_id == organization_id,
-                Product.is_active.is_(True),
-            )
-            .first()
-        )
+        product = products_by_id[item.product_id]
 
-        if product is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Product not found: {item.product_id}",
-            )
-
-        if item.quantity > product.stock_quantity:
+        if product.stock_quantity < item.quantity:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Insufficient stock for product: {product.name}",
@@ -113,16 +116,19 @@ def create_order(
 
         product.stock_quantity = new_stock
 
-        line_total = product.unit_price * Decimal(item.quantity)
+        unit_price = product.unit_price
+        line_total = unit_price * item.quantity
         total_amount += line_total
 
         order_item = OrderItem(
             order_id=order.id,
             product_id=product.id,
             quantity=item.quantity,
-            unit_price=product.unit_price,
+            unit_price=unit_price,
             line_total=line_total,
         )
+
+        db.add(order_item)
 
         movement = InventoryMovement(
             organization_id=organization_id,
@@ -131,14 +137,28 @@ def create_order(
             quantity=item.quantity,
             previous_stock=previous_stock,
             new_stock=new_stock,
-            reason=f"Order created: {order_number}",
+            reason=f"Order created: {order.order_number}",
             created_by=current_user.id,
         )
 
-        db.add(order_item)
         db.add(movement)
 
     order.total_amount = total_amount
+
+    create_audit_log(
+        db=db,
+        organization_id=organization_id,
+        user_id=current_user.id,
+        action="order.created",
+        entity_type="order",
+        entity_id=order.id,
+        details={
+            "order_number": order.order_number,
+            "customer_name": order.customer_name,
+            "total_amount": str(order.total_amount),
+            "items_count": len(payload.items),
+        },
+    )
 
     db.commit()
     db.refresh(order)
@@ -156,7 +176,6 @@ def list_orders(
 
     orders = (
         db.query(Order)
-        .options(joinedload(Order.items))
         .filter(Order.organization_id == organization_id)
         .order_by(Order.created_at.desc())
         .all()
@@ -192,8 +211,10 @@ def update_order_status(
     if order.status == OrderStatus.cancelled:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cancelled order status cannot be changed",
+            detail="Cancelled orders cannot be updated",
         )
+
+    previous_status = order.status
 
     if payload.status == OrderStatus.cancelled:
         for item in order.items:
@@ -228,6 +249,20 @@ def update_order_status(
             db.add(movement)
 
     order.status = payload.status
+
+    create_audit_log(
+        db=db,
+        organization_id=organization_id,
+        user_id=current_user.id,
+        action="order.status_changed",
+        entity_type="order",
+        entity_id=order.id,
+        details={
+            "order_number": order.order_number,
+            "previous_status": previous_status.value,
+            "new_status": payload.status.value,
+        },
+    )
 
     db.commit()
     db.refresh(order)

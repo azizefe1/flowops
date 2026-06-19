@@ -189,6 +189,14 @@ Swagger documentation:
 ```text
 http://127.0.0.1:8000/docs
 ```
+## Documentation
+
+Additional project documentation is available in the `docs` directory:
+
+- [Architecture](docs/architecture.md)
+- [Database Design](docs/database-design.md)
+- [API Overview](docs/api-overview.md)
+- [Deployment Guide](docs/deployment.md)
 
 ## Running Tests
 

@@ -273,8 +273,6 @@ Expected result:
 
 ## CI/CD Status
 
-FlowOps includes a GitHub Actions workflow that runs automatically on every push and pull request to the `main` branch.
-
 The CI pipeline currently includes:
 
 * PostgreSQL service setup
@@ -283,10 +281,11 @@ The CI pipeline currently includes:
 * Alembic database migrations
 * Python compile check
 * Pytest backend API tests
+* Backend Docker image build check
 * Frontend dependency installation
 * Next.js production build check
+* Frontend Docker image build check
 
-This helps ensure that both backend and frontend changes are verified before being considered stable.
 
 ## Docker Support
 

@@ -27,6 +27,35 @@ This project was developed to demonstrate clean API design, database modeling, a
 * Pytest
 * HTTPX
 
+## Frontend Status
+
+FlowOps also includes a Next.js frontend application.
+
+The frontend currently includes:
+
+* Landing page
+* Login page connected to the FastAPI backend
+* JWT token handling with localStorage
+* Dashboard page with live backend data
+* Products page with live backend data
+* Orders page with live backend data
+* Audit Logs page with live backend data
+* Shared authenticated layout with navigation
+* Tailwind-based dark UI design
+
+Frontend source code is located in:
+
+```text
+frontend/
+```
+
+Frontend documentation:
+
+```text
+frontend/README.md
+```
+
+
 ## Main Features
 
 ### Authentication

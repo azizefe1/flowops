@@ -1,36 +1,198 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FlowOps Frontend
 
-## Getting Started
+This is the frontend application for FlowOps, a multi-tenant B2B operations platform.
 
-First, run the development server:
+The frontend is built with Next.js, TypeScript, Tailwind CSS, and App Router. It connects to the FastAPI backend and displays live organization, dashboard, product, order, and audit log data.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Tech Stack
+
+* Next.js
+* React
+* TypeScript
+* Tailwind CSS
+* App Router
+* LocalStorage token handling
+* FastAPI backend integration
+
+## Current Features
+
+### Landing Page
+
+The landing page introduces the FlowOps project and highlights the backend architecture, CI pipeline, API tests, and main business modules.
+
+### Login Page
+
+The login page sends credentials to the FastAPI backend:
+
+```text
+POST /api/auth/login
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+After a successful login, the JWT access token is saved in localStorage and the user is redirected to the dashboard.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Dashboard Page
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The dashboard page fetches live backend data from:
 
-## Learn More
+```text
+GET /api/organizations
+GET /api/organizations/{organization_id}/dashboard
+```
 
-To learn more about Next.js, take a look at the following resources:
+It displays:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+* Total products
+* Active products
+* Low stock products
+* Total orders
+* Pending orders
+* Completed orders
+* Cancelled orders
+* Inventory movements
+* Recent orders
+* Low stock items
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Products Page
 
-## Deploy on Vercel
+The products page fetches product data from:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```text
+GET /api/organizations/{organization_id}/products
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+It displays:
+
+* Product name
+* SKU
+* Category
+* Unit price
+* Stock quantity
+* Low stock threshold
+* Active / inactive status
+
+### Orders Page
+
+The orders page fetches order data from:
+
+```text
+GET /api/organizations/{organization_id}/orders
+```
+
+It displays:
+
+* Order number
+* Customer name
+* Customer email
+* Order status
+* Total amount
+* Order items
+* Product IDs
+* Quantity and line totals
+
+### Audit Logs Page
+
+The audit logs page fetches activity history from:
+
+```text
+GET /api/organizations/{organization_id}/audit-logs
+```
+
+It displays important actions such as:
+
+* Organization creation
+* Product creation
+* Product updates
+* Product deactivation
+* Inventory movements
+* Order creation
+* Order status changes
+
+## Shared AppShell
+
+The frontend uses a shared `AppShell` component for authenticated pages.
+
+The shared layout includes:
+
+* Page title
+* Page subtitle
+* Navigation links
+* Home link
+* Logout button
+
+Pages using AppShell:
+
+```text
+/dashboard
+/products
+/orders
+/audit-logs
+```
+
+## Environment Variables
+
+Create a `.env.local` file in the `frontend` directory:
+
+```env
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+```
+
+This value tells the frontend where the backend API is running.
+
+## Local Development
+
+Start the backend first:
+
+```bash
+cd ..
+docker compose up -d
+cd backend
+.venv\Scripts\activate
+uvicorn app.main:app --reload
+```
+
+Start the frontend:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Frontend URL:
+
+```text
+http://localhost:3000
+```
+
+## Main Routes
+
+```text
+/
+/login
+/dashboard
+/products
+/orders
+/audit-logs
+```
+
+## Build
+
+To create a production build:
+
+```bash
+npm run build
+```
+
+## Current Status
+
+The frontend currently includes:
+
+* Next.js project structure
+* FlowOps landing page
+* Login page connected to backend authentication
+* JWT token saving with localStorage
+* Dashboard connected to backend data
+* Products page connected to backend data
+* Orders page connected to backend data
+* Audit Logs page connected to backend data
+* Shared AppShell layout
+* Tailwind-based dark UI design

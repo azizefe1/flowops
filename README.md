@@ -1,6 +1,6 @@
 # FlowOps
 
-[![Backend CI](https://github.com/azizefe1/flowops/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/azizefe1/flowops/actions/workflows/backend-ci.yml)
+[![FlowOps CI](https://github.com/azizefe1/flowops/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/azizefe1/flowops/actions/workflows/backend-ci.yml)
 
 FlowOps is a multi-tenant B2B operations platform built with FastAPI, PostgreSQL, SQLAlchemy, Alembic, JWT authentication, and Docker.
 
@@ -14,6 +14,7 @@ The system allows users to create organizations, manage products, track inventor
 This project was developed to demonstrate clean API design, database modeling, authentication, multi-tenant data separation, and backend testing practices.
 
 ## Tech Stack
+### Backend
 
 * Python
 * FastAPI
@@ -22,10 +23,26 @@ This project was developed to demonstrate clean API design, database modeling, a
 * Alembic
 * Pydantic
 * JWT Authentication
-* Docker Compose
+* Docker
 * Redis
 * Pytest
-* HTTPX
+
+### Frontend
+
+* Next.js
+* React
+* TypeScript
+* Tailwind CSS
+* App Router
+
+### DevOps & Tooling
+
+* Docker Compose
+* Backend Dockerfile
+* Frontend Dockerfile
+* GitHub Actions CI
+* Automated backend tests
+* Automated frontend build check
 
 ## Frontend Status
 
@@ -253,6 +270,50 @@ Expected result:
 7. View dashboard summary
 8. Review audit logs
 ```
+
+## CI/CD Status
+
+FlowOps includes a GitHub Actions workflow that runs automatically on every push and pull request to the `main` branch.
+
+The CI pipeline currently includes:
+
+* PostgreSQL service setup
+* Redis service setup
+* Backend dependency installation
+* Alembic database migrations
+* Python compile check
+* Pytest backend API tests
+* Frontend dependency installation
+* Next.js production build check
+
+This helps ensure that both backend and frontend changes are verified before being considered stable.
+
+## Docker Support
+
+FlowOps includes Docker support for both backend and frontend.
+
+Backend Docker support:
+
+```text
+backend/Dockerfile
+backend/.dockerignore
+```
+
+Frontend Docker support:
+
+```text
+frontend/Dockerfile
+frontend/.dockerignore
+```
+
+Local infrastructure is managed with:
+
+```text
+docker-compose.yml
+```
+
+The project currently supports containerized PostgreSQL, Redis, backend deployment preparation, and frontend production build preparation.
+
 
 ## Current Backend Status
 

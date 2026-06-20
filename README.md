@@ -315,6 +315,50 @@ The project currently supports containerized PostgreSQL, Redis, backend deployme
 
 ## Running the Full Stack with Docker Compose
 
+## Demo Data Seeding
+
+FlowOps includes a demo seed script for quickly preparing sample data.
+
+First, start the full stack:
+
+```bash
+docker compose up --build
+```
+
+Then, in a separate terminal, run:
+
+```bash
+python scripts/seed_demo_data.py
+```
+
+The seed script creates or reuses:
+
+* Demo user
+* Demo organization
+* Demo products
+* Demo order
+* Audit log records
+
+Demo login credentials:
+
+```text
+Email: demo@flowops.dev
+Password: Demo12345
+```
+
+After seeding, the frontend can be tested at:
+
+```text
+http://localhost:3000
+```
+
+The API documentation is available at:
+
+```text
+http://localhost:8000/docs
+```
+
+
 FlowOps can be started locally with Docker Compose.
 
 This command starts the full stack:

@@ -2,7 +2,6 @@ services:
   postgres:
     image: postgres:16
     container_name: flowops_postgres
-    restart: unless-stopped
     environment:
       POSTGRES_USER: flowops_user
       POSTGRES_PASSWORD: flowops_password
@@ -15,9 +14,35 @@ services:
   redis:
     image: redis:7
     container_name: flowops_redis
-    restart: unless-stopped
     ports:
       - "6379:6379"
+
+  backend:
+    build:
+      context: ./backend
+    container_name: flowops_backend
+    environment:
+      APP_NAME: FlowOps
+      APP_ENV: development
+      DATABASE_URL: postgresql+psycopg://flowops_user:flowops_password@postgres:5432/flowops_db
+      SECRET_KEY: dev_secret_key_change_me_minimum_32_characters
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: flowops_frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
 
 volumes:
   flowops_postgres_data:

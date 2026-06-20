@@ -314,6 +314,53 @@ docker-compose.yml
 
 The project currently supports containerized PostgreSQL, Redis, backend deployment preparation, and frontend production build preparation.
 
+## Running the Full Stack with Docker Compose
+
+FlowOps can be started locally with Docker Compose.
+
+This command starts the full stack:
+
+```bash
+docker compose up --build
+```
+
+The following services will be started:
+
+* PostgreSQL
+* Redis
+* FastAPI backend
+* Next.js frontend
+
+After the containers are running, the application is available at:
+
+```text
+Frontend: http://localhost:3000
+Backend API: http://localhost:8000
+API Health Check: http://localhost:8000/api/health
+API Documentation: http://localhost:8000/docs
+```
+
+To stop the containers, press:
+
+```text
+Ctrl + C
+```
+
+Then run:
+
+```bash
+docker compose down
+```
+
+The PostgreSQL data is stored in a Docker volume named:
+
+```text
+flowops_postgres_data
+```
+
+This allows the database data to persist between container restarts.
+
+
 
 ## Current Backend Status
 

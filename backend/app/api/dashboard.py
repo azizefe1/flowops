@@ -1,4 +1,4 @@
-import uuid
+﻿import uuid
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends
@@ -6,13 +6,13 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
-from app.api.organizations import get_membership_or_404
 from app.db.session import get_db
 from app.models.inventory_movement import InventoryMovement
 from app.models.order import Order, OrderStatus
 from app.models.product import Product
 from app.models.user import User
 from app.schemas.dashboard import DashboardSummaryResponse
+from app.services.permissions import require_organization_member
 
 
 router = APIRouter(
@@ -27,7 +27,7 @@ def get_dashboard_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DashboardSummaryResponse:
-    get_membership_or_404(db, organization_id, current_user.id)
+    require_organization_member(db, organization_id, current_user)
 
     total_products = (
         db.query(func.count(Product.id))

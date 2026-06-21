@@ -1,14 +1,14 @@
-import uuid
+﻿import uuid
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
-from app.api.organizations import get_membership_or_404
 from app.db.session import get_db
 from app.models.audit_log import AuditLog
 from app.models.user import User
 from app.schemas.audit_log import AuditLogResponse
+from app.services.permissions import require_organization_manager
 
 
 router = APIRouter(
@@ -24,7 +24,7 @@ def list_audit_logs(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[AuditLog]:
-    get_membership_or_404(db, organization_id, current_user.id)
+    require_organization_manager(db, organization_id, current_user)
 
     audit_logs = (
         db.query(AuditLog)

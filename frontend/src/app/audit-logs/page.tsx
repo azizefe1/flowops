@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -33,6 +33,24 @@ type AuditLog = {
   created_at: string;
 };
 
+type AuditLogListResponse = {
+  items: AuditLog[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+};
+
+const commonActions = [
+  "all",
+  "product.created",
+  "product.updated",
+  "product.deactivated",
+  "inventory_movement.created",
+  "order.created",
+  "order.status_changed",
+];
+
 function getActionClass(action: string) {
   if (action.includes("created")) {
     return "bg-emerald-400/10 text-emerald-300";
@@ -58,6 +76,11 @@ export default function AuditLogsPage() {
 
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [totalAuditLogs, setTotalAuditLogs] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [selectedAction, setSelectedAction] = useState("all");
+  const [customAction, setCustomAction] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -71,30 +94,48 @@ export default function AuditLogsPage() {
       }
 
       try {
-        const organizations = await apiRequest<Organization[]>(
-          "/api/organizations",
-          {
-            token,
-          },
-        );
+        setIsLoading(true);
+        setErrorMessage("");
 
-        if (organizations.length === 0) {
-          setErrorMessage("No organization found for this user.");
-          return;
+        let selectedOrganization = organization;
+
+        if (!selectedOrganization) {
+          const organizations = await apiRequest<Organization[]>(
+            "/api/organizations",
+            {
+              token,
+            },
+          );
+
+          if (organizations.length === 0) {
+            setErrorMessage("No organization found for this user.");
+            return;
+          }
+
+          selectedOrganization = organizations[0];
+          setOrganization(selectedOrganization);
         }
 
-        const selectedOrganization = organizations[0];
+        const queryParams = new URLSearchParams({
+          page: String(currentPage),
+          page_size: "6",
+        });
 
-        setOrganization(selectedOrganization);
+        if (selectedAction !== "all") {
+          queryParams.set("action", selectedAction);
+        }
 
-        const logs = await apiRequest<AuditLog[]>(
-          `/api/organizations/${selectedOrganization.id}/audit-logs`,
+        const logs = await apiRequest<AuditLogListResponse>(
+          `/api/organizations/${selectedOrganization.id}/audit-logs?${queryParams.toString()}`,
           {
             token,
           },
         );
 
-        setAuditLogs(logs);
+        setAuditLogs(logs.items);
+        setTotalAuditLogs(logs.total);
+        setCurrentPage(logs.page);
+        setTotalPages(logs.pages);
       } catch {
         setErrorMessage("Audit logs could not be loaded.");
       } finally {
@@ -103,7 +144,26 @@ export default function AuditLogsPage() {
     }
 
     loadAuditLogs();
-  }, [router]);
+  }, [router, organization, currentPage, selectedAction]);
+
+  function handleActionChange(action: string) {
+    setSelectedAction(action);
+    setCustomAction("");
+    setCurrentPage(1);
+  }
+
+  function handleCustomActionSearch() {
+    const trimmedAction = customAction.trim();
+
+    if (!trimmedAction) {
+      setSelectedAction("all");
+      setCurrentPage(1);
+      return;
+    }
+
+    setSelectedAction(trimmedAction);
+    setCurrentPage(1);
+  }
 
   return (
     <AppShell
@@ -119,16 +179,53 @@ export default function AuditLogsPage() {
           <h2 className="mt-4 text-4xl font-bold">Activity History</h2>
 
           <p className="mt-4 max-w-2xl leading-7 text-slate-300">
-            This page fetches audit logs directly from the FastAPI backend and
-            displays important organization actions such as product changes,
-            inventory movements, order creation, and order status updates.
+            This page fetches paginated and filterable audit logs directly from
+            the FastAPI backend and displays important organization actions.
           </p>
 
           <div className="mt-6 inline-flex rounded-xl border border-white/10 bg-slate-950/60 px-5 py-3 text-sm text-slate-300">
             Total Audit Logs:{" "}
             <span className="ml-2 font-semibold text-cyan-300">
-              {auditLogs.length}
+              {totalAuditLogs}
             </span>
+          </div>
+
+          <div className="mt-6">
+            <p className="text-sm font-medium text-slate-300">Action Filter</p>
+
+            <div className="mt-3 flex flex-wrap gap-3">
+              {commonActions.map((action) => (
+                <button
+                  key={action}
+                  type="button"
+                  onClick={() => handleActionChange(action)}
+                  className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                    selectedAction === action
+                      ? "border-cyan-300 bg-cyan-300 text-slate-950"
+                      : "border-white/10 text-slate-200 hover:border-cyan-300/60"
+                  }`}
+                >
+                  {action}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+              <input
+                value={customAction}
+                onChange={(event) => setCustomAction(event.target.value)}
+                placeholder="Custom action, example: order.created"
+                className="min-h-11 flex-1 rounded-xl border border-white/10 bg-slate-950/70 px-4 py-2 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300"
+              />
+
+              <button
+                type="button"
+                onClick={handleCustomActionSearch}
+                className="rounded-xl bg-cyan-300 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200"
+              >
+                Filter
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -150,61 +247,96 @@ export default function AuditLogsPage() {
           <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8">
             <h3 className="text-xl font-semibold">No audit logs found</h3>
             <p className="mt-3 text-slate-400">
-              Create or update products, orders, or inventory movements to see
-              audit logs here.
+              Try a different action filter or create/update products, orders,
+              or inventory movements to see audit logs here.
             </p>
           </div>
         </section>
       ) : (
-        <section className="space-y-5">
-          {auditLogs.map((auditLog) => (
-            <div
-              key={auditLog.id}
-              className="rounded-3xl border border-white/10 bg-white/[0.04] p-6"
-            >
-              <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-                <div>
-                  <span
-                    className={`inline-flex rounded-full px-3 py-1 text-sm ${getActionClass(
-                      auditLog.action,
-                    )}`}
-                  >
-                    {auditLog.action}
-                  </span>
+        <>
+          <section className="space-y-5">
+            {auditLogs.map((auditLog) => (
+              <div
+                key={auditLog.id}
+                className="rounded-3xl border border-white/10 bg-white/[0.04] p-6"
+              >
+                <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+                  <div>
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-sm ${getActionClass(
+                        auditLog.action,
+                      )}`}
+                    >
+                      {auditLog.action}
+                    </span>
 
-                  <h3 className="mt-4 text-xl font-semibold">
-                    {auditLog.entity_type}
-                  </h3>
+                    <h3 className="mt-4 text-xl font-semibold">
+                      {auditLog.entity_type}
+                    </h3>
 
-                  <p className="mt-2 text-sm text-slate-400">
-                    Created at: {formatDate(auditLog.created_at)}
-                  </p>
+                    <p className="mt-2 text-sm text-slate-400">
+                      Created at: {formatDate(auditLog.created_at)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-sm text-slate-300">
+                    <p>
+                      Entity ID:{" "}
+                      <span className="text-slate-400">
+                        {auditLog.entity_id || "N/A"}
+                      </span>
+                    </p>
+                    <p className="mt-2">
+                      User ID:{" "}
+                      <span className="text-slate-400">
+                        {auditLog.user_id || "System"}
+                      </span>
+                    </p>
+                  </div>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-sm text-slate-300">
-                  <p>
-                    Entity ID:{" "}
-                    <span className="text-slate-400">
-                      {auditLog.entity_id || "N/A"}
-                    </span>
-                  </p>
-                  <p className="mt-2">
-                    User ID:{" "}
-                    <span className="text-slate-400">
-                      {auditLog.user_id || "System"}
-                    </span>
-                  </p>
-                </div>
+                {auditLog.details && (
+                  <pre className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-slate-950 p-4 text-sm leading-6 text-slate-300">
+                    {JSON.stringify(auditLog.details, null, 2)}
+                  </pre>
+                )}
               </div>
+            ))}
+          </section>
 
-              {auditLog.details && (
-                <pre className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-slate-950 p-4 text-sm leading-6 text-slate-300">
-                  {JSON.stringify(auditLog.details, null, 2)}
-                </pre>
-              )}
+          <section className="mt-8 flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/[0.04] p-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-slate-300">
+              Page{" "}
+              <span className="font-semibold text-cyan-300">
+                {totalPages === 0 ? 0 : currentPage}
+              </span>{" "}
+              of{" "}
+              <span className="font-semibold text-cyan-300">{totalPages}</span>
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                disabled={currentPage <= 1}
+                className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-cyan-300/60 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Previous
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage((page) => Math.min(totalPages, page + 1))
+                }
+                disabled={totalPages === 0 || currentPage >= totalPages}
+                className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-cyan-300/60 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+              </button>
             </div>
-          ))}
-        </section>
+          </section>
+        </>
       )}
     </AppShell>
   );

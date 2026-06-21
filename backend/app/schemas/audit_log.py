@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -18,3 +18,11 @@ class AuditLogResponse(BaseModel):
     model_config = {
         "from_attributes": True,
     }
+
+
+class AuditLogListResponse(BaseModel):
+    items: list[AuditLogResponse]
+    total: int
+    page: int
+    page_size: int
+    pages: int

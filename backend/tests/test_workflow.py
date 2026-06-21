@@ -1,4 +1,4 @@
-from uuid import uuid4
+﻿from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
@@ -85,8 +85,10 @@ def test_organization_product_dashboard_and_audit_log_flow():
 
     assert audit_logs_response.status_code == 200
 
-    audit_logs = audit_logs_response.json()
+    audit_logs_payload = audit_logs_response.json()
+    audit_logs = audit_logs_payload["items"]
 
+    assert audit_logs_payload["total"] >= 1
     assert any(
         audit_log["action"] == "product.created"
         for audit_log in audit_logs

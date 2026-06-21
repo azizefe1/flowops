@@ -1,4 +1,4 @@
-import uuid
+﻿import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
@@ -11,6 +11,7 @@ from app.models.organization_member import OrganizationMember, OrganizationRole
 from app.models.user import User
 from app.schemas.organization import OrganizationCreate, OrganizationResponse
 from app.services.audit import create_audit_log
+from app.services.permissions import require_organization_member
 from app.services.slug import generate_slug
 
 
@@ -18,29 +19,6 @@ router = APIRouter(
     prefix="/api/organizations",
     tags=["organizations"],
 )
-
-
-def get_membership_or_404(
-    db: Session,
-    organization_id: uuid.UUID,
-    user_id: uuid.UUID,
-) -> OrganizationMember:
-    membership = (
-        db.query(OrganizationMember)
-        .filter(
-            OrganizationMember.organization_id == organization_id,
-            OrganizationMember.user_id == user_id,
-        )
-        .first()
-    )
-
-    if membership is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found",
-        )
-
-    return membership
 
 
 @router.post("", response_model=OrganizationResponse, status_code=status.HTTP_201_CREATED)
@@ -119,7 +97,7 @@ def get_organization(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Organization:
-    get_membership_or_404(db, organization_id, current_user.id)
+    require_organization_member(db, organization_id, current_user)
 
     organization = (
         db.query(Organization)

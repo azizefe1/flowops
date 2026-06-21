@@ -2,18 +2,56 @@
 
 [![FlowOps CI](https://github.com/azizefe1/flowops/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/azizefe1/flowops/actions/workflows/backend-ci.yml)
 
-FlowOps is a multi-tenant B2B operations platform built with FastAPI, PostgreSQL, SQLAlchemy, Alembic, JWT authentication, and Docker.
+FlowOps is a multi-tenant B2B operations platform built with FastAPI, PostgreSQL, SQLAlchemy, Alembic, JWT authentication, Docker, Next.js, Tailwind CSS, Pytest, and GitHub Actions CI.
 
-The project is designed as a portfolio-level backend system that demonstrates real-world business operations such as organization management, product management, inventory tracking, order processing, dashboard reporting, audit logging, and automated API testing.
+The project demonstrates a realistic full-stack business operations system with authentication, organization-based data isolation, inventory management, order management, dashboard metrics, audit logging, Dockerized services, automated tests, and CI validation.
 
-## Project Purpose
+## Features
 
-FlowOps focuses on the backend architecture of a modern business management platform.
-The system allows users to create organizations, manage products, track inventory movements, create customer orders, monitor dashboard metrics, and review audit logs for important actions.
+* User registration and login
+* JWT-based authentication
+* Multi-tenant organization structure
+* Product management
+* Inventory stock tracking
+* Order creation and stock reduction
+* Dashboard summary data
+* Audit log tracking
+* FastAPI Swagger documentation
+* Next.js frontend
+* Dockerized backend and frontend
+* PostgreSQL and Redis with Docker Compose
+* Automated backend tests
+* Automated frontend production build check
+* Automated Docker image build checks with GitHub Actions
 
-This project was developed to demonstrate clean API design, database modeling, authentication, multi-tenant data separation, and backend testing practices.
+## Screenshots
+
+### Landing Page
+
+![FlowOps Landing Page](docs/screenshots/landing.png)
+
+### Login Page
+
+![FlowOps Login Page](docs/screenshots/login.png)
+
+### Dashboard
+
+![FlowOps Dashboard](docs/screenshots/dashboard.png)
+
+### Products
+
+![FlowOps Products](docs/screenshots/products.png)
+
+### Orders
+
+![FlowOps Orders](docs/screenshots/orders.png)
+
+### Audit Logs
+
+![FlowOps Audit Logs](docs/screenshots/audit-logs.png)
 
 ## Tech Stack
+
 ### Backend
 
 * Python
@@ -43,106 +81,7 @@ This project was developed to demonstrate clean API design, database modeling, a
 * GitHub Actions CI
 * Automated backend tests
 * Automated frontend build check
-
-## Frontend Status
-
-FlowOps also includes a Next.js frontend application.
-
-The frontend currently includes:
-
-* Landing page
-* Login page connected to the FastAPI backend
-* JWT token handling with localStorage
-* Dashboard page with live backend data
-* Products page with live backend data
-* Orders page with live backend data
-* Audit Logs page with live backend data
-* Shared authenticated layout with navigation
-* Tailwind-based dark UI design
-
-Frontend source code is located in:
-
-```text
-frontend/
-```
-
-Frontend documentation:
-
-```text
-frontend/README.md
-```
-
-
-## Main Features
-
-### Authentication
-
-* User registration
-* User login
-* JWT-based authentication
-* Protected API endpoints
-
-### Multi-Tenant Organization Management
-
-* Create organizations
-* List user organizations
-* Organization membership control
-* Organization-based data isolation
-
-### Product Management
-
-* Create products
-* List products
-* View product details
-* Update products
-* Deactivate products
-* SKU uniqueness per organization
-
-### Inventory Management
-
-* Stock-in movements
-* Stock-out movements
-* Stock adjustment movements
-* Stock history tracking
-* Insufficient stock validation
-
-### Order Management
-
-* Create customer orders
-* Add multiple order items
-* Automatic stock deduction
-* Order status updates
-* Cancelled order stock restoration
-* Order history listing
-
-### Dashboard Summary
-
-* Total product count
-* Active product count
-* Low stock product count
-* Total order count
-* Pending, completed, and cancelled order counts
-* Total order value
-* Inventory movement count
-* Recent orders
-* Low stock items
-
-### Audit Logging
-
-* Organization creation logs
-* Product creation logs
-* Product update logs
-* Product deactivation logs
-* Inventory movement logs
-* Order creation logs
-* Order status change logs
-
-### Automated Tests
-
-* Health endpoint tests
-* Authentication tests
-* Full API workflow test
-* Organization, product, dashboard, and audit log flow validation
+* Automated Docker image build checks
 
 ## Project Structure
 
@@ -158,120 +97,30 @@ flowops/
 │   │   └── services/
 │   ├── alembic/
 │   ├── tests/
+│   ├── Dockerfile
 │   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   ├── components/
+│   │   └── lib/
+│   ├── Dockerfile
+│   └── package.json
 ├── docs/
+│   ├── screenshots/
+│   ├── api-overview.md
+│   ├── architecture.md
+│   ├── database-design.md
+│   └── deployment.md
+├── scripts/
+│   └── seed_demo_data.py
 ├── docker-compose.yml
-├── .env.example
-├── .gitignore
 └── README.md
 ```
 
-## API Modules
-
-```text
-/api/auth
-/api/organizations
-/api/organizations/{organization_id}/products
-/api/organizations/{organization_id}/inventory-movements
-/api/organizations/{organization_id}/orders
-/api/organizations/{organization_id}/dashboard
-/api/organizations/{organization_id}/audit-logs
-/api/health
-```
-
-## Local Development Setup
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/azizefe1/flowops.git
-cd flowops
-```
-
-### 2. Start Docker services
-
-```bash
-docker compose up -d
-```
-
-### 3. Create and activate virtual environment
-
-```bash
-cd backend
-python -m venv .venv
-.venv\Scripts\activate
-```
-
-### 4. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 5. Configure environment variables
-
-Create a `.env` file inside the `backend` directory by using `.env.example` as a reference.
-
-### 6. Run database migrations
-
-```bash
-alembic upgrade head
-```
-
-### 7. Start the API server
-
-```bash
-uvicorn app.main:app --reload
-```
-
-The API will be available at:
-
-```text
-http://127.0.0.1:8000
-```
-
-Swagger documentation:
-
-```text
-http://127.0.0.1:8000/docs
-```
-## Documentation
-
-Additional project documentation is available in the `docs` directory:
-
-- [Architecture](docs/architecture.md)
-- [Database Design](docs/database-design.md)
-- [API Overview](docs/api-overview.md)
-- [Deployment Guide](docs/deployment.md)
-
-## Running Tests
-
-From the `backend` directory:
-
-```bash
-pytest
-```
-
-Expected result:
-
-```text
-5 passed
-```
-
-## Example Workflow
-
-```text
-1. Register a user
-2. Login and receive JWT token
-3. Create an organization
-4. Create products inside the organization
-5. Create inventory movements
-6. Create customer orders
-7. View dashboard summary
-8. Review audit logs
-```
-
 ## CI/CD Status
+
+FlowOps includes a GitHub Actions workflow that runs automatically on every push and pull request to the `main` branch.
 
 The CI pipeline currently includes:
 
@@ -286,6 +135,7 @@ The CI pipeline currently includes:
 * Next.js production build check
 * Frontend Docker image build check
 
+This helps ensure that both backend and frontend changes are verified before being considered stable.
 
 ## Docker Support
 
@@ -311,53 +161,9 @@ Local infrastructure is managed with:
 docker-compose.yml
 ```
 
-The project currently supports containerized PostgreSQL, Redis, backend deployment preparation, and frontend production build preparation.
+The project supports containerized PostgreSQL, Redis, backend API, frontend application, migration execution, and production build preparation.
 
 ## Running the Full Stack with Docker Compose
-
-## Demo Data Seeding
-
-FlowOps includes a demo seed script for quickly preparing sample data.
-
-First, start the full stack:
-
-```bash
-docker compose up --build
-```
-
-Then, in a separate terminal, run:
-
-```bash
-python scripts/seed_demo_data.py
-```
-
-The seed script creates or reuses:
-
-* Demo user
-* Demo organization
-* Demo products
-* Demo order
-* Audit log records
-
-Demo login credentials:
-
-```text
-Email: demo@flowops.dev
-Password: Demo12345
-```
-
-After seeding, the frontend can be tested at:
-
-```text
-http://localhost:3000
-```
-
-The API documentation is available at:
-
-```text
-http://localhost:8000/docs
-```
-
 
 FlowOps can be started locally with Docker Compose.
 
@@ -403,26 +209,162 @@ flowops_postgres_data
 
 This allows the database data to persist between container restarts.
 
+## Demo Data Seeding
 
+FlowOps includes a demo seed script for quickly preparing sample data.
 
-## Current Backend Status
+First, start the full stack:
 
-The backend currently includes:
+```bash
+docker compose up --build
+```
 
-* FastAPI application structure
-* PostgreSQL database integration
-* Alembic migration system
-* JWT authentication
-* Multi-tenant organization logic
-* Product management
-* Inventory movement tracking
-* Order management
-* Dashboard summary endpoint
-* Audit logging system
-* Automated backend API tests
+Then, in a separate terminal, run:
 
-## Author
+```bash
+python scripts/seed_demo_data.py
+```
 
-Aziz Efe Eryılmaz
+The seed script creates or reuses:
 
-GitHub: [azizefe1](https://github.com/azizefe1)
+* Demo user
+* Demo organization
+* Demo products
+* Demo order
+* Audit log records
+
+Demo login credentials:
+
+```text
+Email: demo@flowops.dev
+Password: Demo12345
+```
+
+After seeding, the frontend can be tested at:
+
+```text
+http://localhost:3000
+```
+
+The API documentation is available at:
+
+```text
+http://localhost:8000/docs
+```
+
+## Local Development
+
+### Backend
+
+Start PostgreSQL and Redis:
+
+```bash
+docker compose up postgres redis
+```
+
+Run the backend locally:
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+alembic upgrade head
+uvicorn app.main:app --reload
+```
+
+Backend API:
+
+```text
+http://localhost:8000
+```
+
+Swagger documentation:
+
+```text
+http://localhost:8000/docs
+```
+
+### Frontend
+
+Run the frontend locally:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend:
+
+```text
+http://localhost:3000
+```
+
+## Testing
+
+Run backend tests:
+
+```bash
+cd backend
+pytest
+```
+
+Run frontend production build:
+
+```bash
+cd frontend
+npm run build
+```
+
+Build backend Docker image:
+
+```bash
+cd backend
+docker build -t flowops-backend:test .
+```
+
+Build frontend Docker image:
+
+```bash
+cd frontend
+docker build -t flowops-frontend:test .
+```
+
+## Current Project Status
+
+FlowOps currently includes:
+
+* Authentication API
+* Organization API
+* Product API
+* Inventory movement API
+* Order API
+* Dashboard summary API
+* Audit logs API
+* Connected frontend pages
+* Docker Compose full-stack setup
+* Demo data seed script
+* Backend tests
+* Frontend build validation
+* GitHub Actions CI
+* Project documentation
+
+## Documentation
+
+Additional documentation is available in the `docs` directory:
+
+```text
+docs/architecture.md
+docs/database-design.md
+docs/api-overview.md
+docs/deployment.md
+```
+
+## Purpose
+
+FlowOps was developed as a professional portfolio project to demonstrate full-stack backend and frontend development, API design, database modeling, Docker usage, automated testing, CI workflows, and project documentation.
+
+## License
+
+This project is developed for portfolio and educational purposes.

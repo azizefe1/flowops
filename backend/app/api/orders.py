@@ -1,4 +1,4 @@
-import uuid
+﻿import uuid
 from datetime import datetime
 from decimal import Decimal
 
@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
-from app.api.organizations import get_membership_or_404
 from app.db.session import get_db
 from app.models.inventory_movement import InventoryMovement, InventoryMovementType
 from app.models.order import Order, OrderItem, OrderStatus
@@ -14,6 +13,10 @@ from app.models.product import Product
 from app.models.user import User
 from app.schemas.order import OrderCreate, OrderResponse, OrderStatusUpdate
 from app.services.audit import create_audit_log
+from app.services.permissions import (
+    require_organization_manager,
+    require_organization_member,
+)
 
 
 router = APIRouter(
@@ -59,7 +62,7 @@ def create_order(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Order:
-    get_membership_or_404(db, organization_id, current_user.id)
+    require_organization_manager(db, organization_id, current_user)
 
     product_ids = [item.product_id for item in payload.items]
 
@@ -172,7 +175,7 @@ def list_orders(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[Order]:
-    get_membership_or_404(db, organization_id, current_user.id)
+    require_organization_member(db, organization_id, current_user)
 
     orders = (
         db.query(Order)
@@ -191,7 +194,7 @@ def get_order(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Order:
-    get_membership_or_404(db, organization_id, current_user.id)
+    require_organization_member(db, organization_id, current_user)
 
     return get_order_or_404(db, organization_id, order_id)
 
@@ -204,7 +207,7 @@ def update_order_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Order:
-    get_membership_or_404(db, organization_id, current_user.id)
+    require_organization_manager(db, organization_id, current_user)
 
     order = get_order_or_404(db, organization_id, order_id)
 

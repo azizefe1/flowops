@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -43,3 +43,11 @@ class ProductResponse(BaseModel):
     model_config = {
         "from_attributes": True,
     }
+
+
+class ProductListResponse(BaseModel):
+    items: list[ProductResponse]
+    total: int
+    page: int
+    page_size: int
+    pages: int

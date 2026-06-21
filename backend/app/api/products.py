@@ -1,6 +1,7 @@
 ﻿import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -8,7 +9,12 @@ from app.api.auth import get_current_user
 from app.db.session import get_db
 from app.models.product import Product
 from app.models.user import User
-from app.schemas.product import ProductCreate, ProductResponse, ProductUpdate
+from app.schemas.product import (
+    ProductCreate,
+    ProductListResponse,
+    ProductResponse,
+    ProductUpdate,
+)
 from app.services.audit import create_audit_log
 from app.services.permissions import (
     require_organization_manager,
@@ -97,22 +103,47 @@ def create_product(
     return product
 
 
-@router.get("", response_model=list[ProductResponse])
+@router.get("", response_model=ProductListResponse)
 def list_products(
     organization_id: uuid.UUID,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    search: str | None = Query(default=None, max_length=120),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> list[Product]:
+) -> ProductListResponse:
     require_organization_member(db, organization_id, current_user)
 
+    query = db.query(Product).filter(Product.organization_id == organization_id)
+
+    if search:
+        search_value = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                Product.name.ilike(search_value),
+                Product.sku.ilike(search_value),
+                Product.category.ilike(search_value),
+            )
+        )
+
+    total = query.with_entities(func.count(Product.id)).scalar() or 0
+    pages = (total + page_size - 1) // page_size if total > 0 else 0
+    offset = (page - 1) * page_size
+
     products = (
-        db.query(Product)
-        .filter(Product.organization_id == organization_id)
-        .order_by(Product.created_at.desc())
+        query.order_by(Product.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
         .all()
     )
 
-    return products
+    return ProductListResponse(
+        items=products,
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=pages,
+    )
 
 
 @router.get("/{product_id}", response_model=ProductResponse)

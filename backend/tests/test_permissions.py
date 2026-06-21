@@ -114,7 +114,11 @@ def test_staff_can_list_products_but_cannot_create_product():
     )
 
     assert staff_list_response.status_code == 200
-    assert len(staff_list_response.json()) >= 1
+
+    staff_products = staff_list_response.json()
+
+    assert staff_products["total"] >= 1
+    assert len(staff_products["items"]) >= 1
 
     staff_create_response = client.post(
         f"/api/organizations/{organization_id}/products",

@@ -146,8 +146,10 @@ def get_products(organization_id, token):
     if isinstance(response, list):
         return response
 
-    return []
+    if isinstance(response, dict) and "items" in response:
+        return response["items"]
 
+    return []
 
 def create_missing_products(organization_id, token):
     existing_products = get_products(organization_id, token)

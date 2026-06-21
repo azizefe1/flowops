@@ -11,21 +11,22 @@ The project demonstrates a realistic full-stack business operations system with 
 - Role-based authorization with owner, manager, and staff roles
 - Staff users can view operational data but cannot create or modify protected resources
 - Owner and manager roles can manage products, inventory movements, and orders
-* User registration and login
-* JWT-based authentication
-* Multi-tenant organization structure
-* Product management
-* Inventory stock tracking
-* Order creation and stock reduction
-* Dashboard summary data
-* Audit log tracking
-* FastAPI Swagger documentation
-* Next.js frontend
-* Dockerized backend and frontend
-* PostgreSQL and Redis with Docker Compose
-* Automated backend tests
-* Automated frontend production build check
-* Automated Docker image build checks with GitHub Actions
+- User registration and login
+- JWT-based authentication
+- Multi-tenant organization structure
+- Product management with pagination and search
+- Inventory stock tracking with movement history, pagination, and movement type filtering
+- Order creation, stock reduction, pagination, and status filtering
+- Dashboard summary data
+- Audit log tracking with pagination and action filtering
+- FastAPI Swagger documentation
+- Next.js frontend
+- Dedicated frontend pages for dashboard, products, inventory, orders, and audit logs
+- Dockerized backend and frontend
+- PostgreSQL and Redis with Docker Compose
+- Automated backend tests
+- Automated frontend production build check
+- Automated Docker image build checks with GitHub Actions
 
 ## Role-Based Authorization
 
@@ -55,6 +56,19 @@ Current permission behavior:
 | View audit logs               |   Yes |     Yes |    No |
 
 Role-based access control is implemented through a centralized permission helper and verified with automated backend tests.
+
+## Pagination, Search, and Filtering
+
+FlowOps includes pagination, search, and filtering support for core operational resources.
+
+| Resource | Pagination | Search | Filter |
+| --- | ---: | ---: | --- |
+| Products | Yes | Yes | Search by name, SKU, or category |
+| Orders | Yes | No | Filter by order status |
+| Inventory Movements | Yes | No | Filter by movement type |
+| Audit Logs | Yes | No | Filter by action |
+
+These features make the platform more realistic for production-style operational dashboards where data grows over time.
 
 
 ## Screenshots
@@ -120,37 +134,35 @@ Role-based access control is implemented through a centralized permission helper
 
 ```text
 flowops/
-├── backend/
-│   ├── app/
-│   │   ├── api/
-│   │   ├── core/
-│   │   ├── db/
-│   │   ├── models/
-│   │   ├── schemas/
-│   │   └── services/
-│   ├── alembic/
-│   ├── tests/
-│   ├── Dockerfile
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── app/
-│   │   ├── components/
-│   │   └── lib/
-│   ├── Dockerfile
-│   └── package.json
-├── docs/
-│   ├── screenshots/
-│   ├── api-overview.md
-│   ├── architecture.md
-│   ├── database-design.md
-│   └── deployment.md
-├── scripts/
-│   └── seed_demo_data.py
-├── docker-compose.yml
-└── README.md
-```
-
+|-- backend/
+|   |-- app/
+|   |   |-- api/
+|   |   |-- core/
+|   |   |-- db/
+|   |   |-- models/
+|   |   |-- schemas/
+|   |   `-- services/
+|   |-- alembic/
+|   |-- tests/
+|   |-- Dockerfile
+|   `-- requirements.txt
+|-- frontend/
+|   |-- src/
+|   |   |-- app/
+|   |   |-- components/
+|   |   `-- lib/
+|   |-- Dockerfile
+|   `-- package.json
+|-- docs/
+|   |-- screenshots/
+|   |-- api-overview.md
+|   |-- architecture.md
+|   |-- database-design.md
+|   `-- deployment.md
+|-- scripts/
+|   `-- seed_demo_data.py
+|-- docker-compose.yml
+`-- README.md
 ## CI/CD Status
 
 FlowOps includes a GitHub Actions workflow that runs automatically on every push and pull request to the `main` branch.
@@ -264,6 +276,7 @@ The seed script creates or reuses:
 * Demo organization
 * Demo products
 * Demo order
+* Inventory movement records through order stock reduction
 * Audit log records
 
 Demo login credentials:
@@ -368,20 +381,22 @@ docker build -t flowops-frontend:test .
 
 FlowOps currently includes:
 
-* Authentication API
-* Organization API
-* Product API
-* Inventory movement API
-* Order API
-* Dashboard summary API
-* Audit logs API
-* Connected frontend pages
-* Docker Compose full-stack setup
-* Demo data seed script
-* Backend tests
-* Frontend build validation
-* GitHub Actions CI
-* Project documentation
+- Authentication API
+- Organization API
+- Product API with pagination and search
+- Inventory movement API with pagination and movement type filtering
+- Order API with pagination and status filtering
+- Dashboard summary API
+- Audit logs API with pagination and action filtering
+- Role-based authorization
+- Connected frontend pages
+- Frontend inventory movement page
+- Docker Compose full-stack setup
+- Demo data seed script
+- Backend tests
+- Frontend build validation
+- GitHub Actions CI
+- Project documentation
 
 ## Documentation
 

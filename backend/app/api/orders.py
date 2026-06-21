@@ -2,7 +2,8 @@
 from datetime import datetime
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
@@ -11,7 +12,12 @@ from app.models.inventory_movement import InventoryMovement, InventoryMovementTy
 from app.models.order import Order, OrderItem, OrderStatus
 from app.models.product import Product
 from app.models.user import User
-from app.schemas.order import OrderCreate, OrderResponse, OrderStatusUpdate
+from app.schemas.order import (
+    OrderCreate,
+    OrderListResponse,
+    OrderResponse,
+    OrderStatusUpdate,
+)
 from app.services.audit import create_audit_log
 from app.services.permissions import (
     require_organization_manager,
@@ -169,22 +175,40 @@ def create_order(
     return get_order_or_404(db, organization_id, order.id)
 
 
-@router.get("", response_model=list[OrderResponse])
+@router.get("", response_model=OrderListResponse)
 def list_orders(
     organization_id: uuid.UUID,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    status_filter: OrderStatus | None = Query(default=None, alias="status"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> list[Order]:
+) -> OrderListResponse:
     require_organization_member(db, organization_id, current_user)
 
+    query = db.query(Order).filter(Order.organization_id == organization_id)
+
+    if status_filter is not None:
+        query = query.filter(Order.status == status_filter)
+
+    total = query.with_entities(func.count(Order.id)).scalar() or 0
+    pages = (total + page_size - 1) // page_size if total > 0 else 0
+    offset = (page - 1) * page_size
+
     orders = (
-        db.query(Order)
-        .filter(Order.organization_id == organization_id)
-        .order_by(Order.created_at.desc())
+        query.order_by(Order.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
         .all()
     )
 
-    return orders
+    return OrderListResponse(
+        items=orders,
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=pages,
+    )
 
 
 @router.get("/{order_id}", response_model=OrderResponse)

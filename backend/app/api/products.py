@@ -1,16 +1,19 @@
-import uuid
+﻿import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
-from app.api.organizations import get_membership_or_404
 from app.db.session import get_db
 from app.models.product import Product
 from app.models.user import User
 from app.schemas.product import ProductCreate, ProductResponse, ProductUpdate
 from app.services.audit import create_audit_log
+from app.services.permissions import (
+    require_organization_manager,
+    require_organization_member,
+)
 
 
 router = APIRouter(
@@ -49,7 +52,7 @@ def create_product(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Product:
-    get_membership_or_404(db, organization_id, current_user.id)
+    require_organization_manager(db, organization_id, current_user)
 
     product = Product(
         organization_id=organization_id,
@@ -100,7 +103,7 @@ def list_products(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[Product]:
-    get_membership_or_404(db, organization_id, current_user.id)
+    require_organization_member(db, organization_id, current_user)
 
     products = (
         db.query(Product)
@@ -119,7 +122,7 @@ def get_product(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Product:
-    get_membership_or_404(db, organization_id, current_user.id)
+    require_organization_member(db, organization_id, current_user)
 
     return get_product_or_404(db, organization_id, product_id)
 
@@ -132,7 +135,7 @@ def update_product(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Product:
-    get_membership_or_404(db, organization_id, current_user.id)
+    require_organization_manager(db, organization_id, current_user)
 
     product = get_product_or_404(db, organization_id, product_id)
 
@@ -177,7 +180,7 @@ def delete_product(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Product:
-    get_membership_or_404(db, organization_id, current_user.id)
+    require_organization_manager(db, organization_id, current_user)
 
     product = get_product_or_404(db, organization_id, product_id)
 

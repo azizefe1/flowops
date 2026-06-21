@@ -8,6 +8,9 @@ The project demonstrates a realistic full-stack business operations system with 
 
 ## Features
 
+- Role-based authorization with owner, manager, and staff roles
+- Staff users can view operational data but cannot create or modify protected resources
+- Owner and manager roles can manage products, inventory movements, and orders
 * User registration and login
 * JWT-based authentication
 * Multi-tenant organization structure
@@ -23,6 +26,36 @@ The project demonstrates a realistic full-stack business operations system with 
 * Automated backend tests
 * Automated frontend production build check
 * Automated Docker image build checks with GitHub Actions
+
+## Role-Based Authorization
+
+FlowOps includes organization-level role-based authorization.
+
+Each organization member has one of the following roles:
+
+| Role      | Description                                                                        |
+| --------- | ---------------------------------------------------------------------------------- |
+| `owner`   | Full organization-level access                                                     |
+| `manager` | Can manage operational resources such as products, inventory movements, and orders |
+| `staff`   | Can view allowed operational data but cannot perform protected write actions       |
+
+Current permission behavior:
+
+| Feature                       | Owner | Manager | Staff |
+| ----------------------------- | ----: | ------: | ----: |
+| View organizations            |   Yes |     Yes |   Yes |
+| View dashboard                |   Yes |     Yes |   Yes |
+| View products                 |   Yes |     Yes |   Yes |
+| Create/update/delete products |   Yes |     Yes |    No |
+| View inventory movements      |   Yes |     Yes |   Yes |
+| Create inventory movements    |   Yes |     Yes |    No |
+| View orders                   |   Yes |     Yes |   Yes |
+| Create orders                 |   Yes |     Yes |    No |
+| Update order status           |   Yes |     Yes |    No |
+| View audit logs               |   Yes |     Yes |    No |
+
+Role-based access control is implemented through a centralized permission helper and verified with automated backend tests.
+
 
 ## Screenshots
 

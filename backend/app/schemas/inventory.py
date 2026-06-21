@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -28,3 +28,11 @@ class InventoryMovementResponse(BaseModel):
     model_config = {
         "from_attributes": True,
     }
+
+
+class InventoryMovementListResponse(BaseModel):
+    items: list[InventoryMovementResponse]
+    total: int
+    page: int
+    page_size: int
+    pages: int

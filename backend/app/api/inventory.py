@@ -1,6 +1,7 @@
 ﻿import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
@@ -8,7 +9,11 @@ from app.db.session import get_db
 from app.models.inventory_movement import InventoryMovement, InventoryMovementType
 from app.models.product import Product
 from app.models.user import User
-from app.schemas.inventory import InventoryMovementCreate, InventoryMovementResponse
+from app.schemas.inventory import (
+    InventoryMovementCreate,
+    InventoryMovementListResponse,
+    InventoryMovementResponse,
+)
 from app.services.audit import create_audit_log
 from app.services.permissions import (
     require_organization_manager,
@@ -113,19 +118,39 @@ def create_stock_movement(
     return movement
 
 
-@router.get("", response_model=list[InventoryMovementResponse])
+@router.get("", response_model=InventoryMovementListResponse)
 def list_inventory_movements(
     organization_id: uuid.UUID,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    movement_type: InventoryMovementType | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> list[InventoryMovement]:
+) -> InventoryMovementListResponse:
     require_organization_member(db, organization_id, current_user)
 
+    query = db.query(InventoryMovement).filter(
+        InventoryMovement.organization_id == organization_id,
+    )
+
+    if movement_type is not None:
+        query = query.filter(InventoryMovement.movement_type == movement_type)
+
+    total = query.with_entities(func.count(InventoryMovement.id)).scalar() or 0
+    pages = (total + page_size - 1) // page_size if total > 0 else 0
+    offset = (page - 1) * page_size
+
     movements = (
-        db.query(InventoryMovement)
-        .filter(InventoryMovement.organization_id == organization_id)
-        .order_by(InventoryMovement.created_at.desc())
+        query.order_by(InventoryMovement.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
         .all()
     )
 
-    return movements
+    return InventoryMovementListResponse(
+        items=movements,
+        total=total,
+        page=page,
+        page_size=page_size,
+        pages=pages,
+    )

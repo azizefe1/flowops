@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -19,6 +19,10 @@ const navigationItems = [
   {
     label: "Products",
     href: "/products",
+  },
+  {
+    label: "Inventory",
+    href: "/inventory",
   },
   {
     label: "Orders",

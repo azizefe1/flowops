@@ -1,4 +1,4 @@
-# FlowOps Database Design
+﻿# FlowOps Database Design
 
 FlowOps uses PostgreSQL as the main relational database.
 
@@ -6,7 +6,7 @@ The database is designed for a multi-tenant B2B operations platform. Most busine
 
 ## Main Database Tables
 
-```text
+~~~text
 users
 organizations
 organization_members
@@ -15,7 +15,7 @@ inventory_movements
 orders
 order_items
 audit_logs
-```
+~~~
 
 ## Users Table
 
@@ -23,7 +23,7 @@ The `users` table stores registered platform users.
 
 Main fields:
 
-```text
+~~~text
 id
 email
 hashed_password
@@ -31,14 +31,14 @@ full_name
 is_active
 created_at
 updated_at
-```
+~~~
 
 Purpose:
 
-* Store user account information
-* Support authentication
-* Connect users to organizations
-* Track who created business records
+- Store user account information
+- Support authentication
+- Connect users to organizations through organization memberships
+- Track who created business records
 
 ## Organizations Table
 
@@ -46,19 +46,19 @@ The `organizations` table stores companies or workspaces created by users.
 
 Main fields:
 
-```text
+~~~text
 id
 name
 slug
 created_at
 updated_at
-```
+~~~
 
 Purpose:
 
-* Represent a tenant in the system
-* Separate business data by organization
-* Connect products, orders, inventory movements, and audit logs to a specific organization
+- Represent a tenant in the system
+- Separate business data by organization
+- Connect products, orders, inventory movements, and audit logs to a specific organization
 
 ## Organization Members Table
 
@@ -66,19 +66,29 @@ The `organization_members` table connects users with organizations.
 
 Main fields:
 
-```text
+~~~text
 id
 organization_id
 user_id
 role
 created_at
-```
+~~~
+
+Supported roles:
+
+~~~text
+owner
+manager
+staff
+~~~
 
 Purpose:
 
-* Manage organization membership
-* Control access to organization data
-* Support roles such as owner, admin, and member
+- Manage organization membership
+- Control access to organization data
+- Support role-based authorization
+- Allow owners and managers to manage operational resources
+- Allow staff users to view allowed operational data without protected write access
 
 ## Products Table
 
@@ -86,7 +96,7 @@ The `products` table stores products that belong to an organization.
 
 Main fields:
 
-```text
+~~~text
 id
 organization_id
 name
@@ -99,14 +109,16 @@ low_stock_threshold
 is_active
 created_at
 updated_at
-```
+~~~
 
 Purpose:
 
-* Manage organization-specific product catalog
-* Track product stock quantity
-* Support low stock detection
-* Prevent duplicate SKU values inside the same organization
+- Manage organization-specific product catalog
+- Track product stock quantity
+- Support low stock detection
+- Prevent duplicate SKU values inside the same organization
+- Support paginated product listing
+- Support product search by name, SKU, or category
 
 ## Inventory Movements Table
 
@@ -114,7 +126,7 @@ The `inventory_movements` table stores stock changes.
 
 Main fields:
 
-```text
+~~~text
 id
 organization_id
 product_id
@@ -125,22 +137,24 @@ new_stock
 reason
 created_by
 created_at
-```
+~~~
 
 Movement types:
 
-```text
-in
-out
+~~~text
+stock_in
+stock_out
 adjustment
-```
+~~~
 
 Purpose:
 
-* Track stock-in operations
-* Track stock-out operations
-* Track stock adjustments
-* Keep stock history for each product
+- Track stock-in operations
+- Track stock-out operations
+- Track stock adjustments
+- Keep stock history for each product
+- Support paginated inventory movement listing
+- Support filtering by movement type
 
 ## Orders Table
 
@@ -148,7 +162,7 @@ The `orders` table stores customer orders.
 
 Main fields:
 
-```text
+~~~text
 id
 organization_id
 order_number
@@ -159,24 +173,26 @@ total_amount
 created_by
 created_at
 updated_at
-```
+~~~
 
 Order statuses:
 
-```text
+~~~text
 pending
 approved
 shipped
 completed
 cancelled
-```
+~~~
 
 Purpose:
 
-* Store customer order information
-* Track order status
-* Calculate total order value
-* Connect orders to organizations and users
+- Store customer order information
+- Track order status
+- Calculate total order value
+- Connect orders to organizations and users
+- Support paginated order listing
+- Support filtering by order status
 
 ## Order Items Table
 
@@ -184,21 +200,21 @@ The `order_items` table stores products inside an order.
 
 Main fields:
 
-```text
+~~~text
 id
 order_id
 product_id
 quantity
 unit_price
 line_total
-```
+~~~
 
 Purpose:
 
-* Support multiple products in a single order
-* Store product price at the time of order
-* Calculate line totals
-* Keep order details separate from the main order record
+- Support multiple products in a single order
+- Store product price at the time of order
+- Calculate line totals
+- Keep order details separate from the main order record
 
 ## Audit Logs Table
 
@@ -206,7 +222,7 @@ The `audit_logs` table stores important system actions.
 
 Main fields:
 
-```text
+~~~text
 id
 organization_id
 user_id
@@ -215,18 +231,20 @@ entity_type
 entity_id
 details
 created_at
-```
+~~~
 
 Purpose:
 
-* Record important business actions
-* Improve traceability
-* Support debugging and monitoring
-* Keep a history of user actions
+- Record important business actions
+- Improve traceability
+- Support debugging and monitoring
+- Keep a history of user actions
+- Support paginated audit log listing
+- Support filtering by action
 
 Example actions:
 
-```text
+~~~text
 organization.created
 product.created
 product.updated
@@ -234,28 +252,28 @@ product.deactivated
 inventory.movement.created
 order.created
 order.status_changed
-```
+~~~
 
 ## Main Relationships
 
-```text
-User 1──N OrganizationMember
-Organization 1──N OrganizationMember
+~~~text
+User 1--N OrganizationMember
+Organization 1--N OrganizationMember
 
-Organization 1──N Product
-Organization 1──N InventoryMovement
-Organization 1──N Order
-Organization 1──N AuditLog
+Organization 1--N Product
+Organization 1--N InventoryMovement
+Organization 1--N Order
+Organization 1--N AuditLog
 
-Product 1──N InventoryMovement
-Product 1──N OrderItem
+Product 1--N InventoryMovement
+Product 1--N OrderItem
 
-Order 1──N OrderItem
+Order 1--N OrderItem
 
-User 1──N InventoryMovement
-User 1──N Order
-User 1──N AuditLog
-```
+User 1--N InventoryMovement
+User 1--N Order
+User 1--N AuditLog
+~~~
 
 ## Multi-Tenant Data Separation
 
@@ -263,17 +281,31 @@ FlowOps separates data by `organization_id`.
 
 Tables that include `organization_id`:
 
-```text
+~~~text
 products
 inventory_movements
 orders
 audit_logs
 organization_members
-```
+~~~
 
 Before accessing organization-specific data, the backend checks whether the current user is a member of the organization.
 
 This prevents users from accessing another organization's products, orders, inventory records, dashboard data, or audit logs.
+
+## Role-Based Authorization Data Design
+
+Role-based authorization is based on the `organization_members.role` field.
+
+Current role behavior:
+
+~~~text
+owner   -> full organization-level access
+manager -> can manage operational resources
+staff   -> can view allowed operational data but cannot perform protected write actions
+~~~
+
+This keeps permissions tied to organization membership instead of storing permissions directly on the user account.
 
 ## Stock Management Design
 
@@ -291,23 +323,50 @@ Each order has one main `orders` record and one or more `order_items`.
 
 When an order is created:
 
-```text
+~~~text
 1. Product stock is checked
 2. Stock is reduced
 3. Order items are created
 4. Inventory movement records are created
 5. Order total amount is calculated
 6. Audit log is created
-```
+~~~
 
 When an order is cancelled:
 
-```text
+~~~text
 1. Order status is changed to cancelled
 2. Product stock is restored
 3. Stock-in movement records are created
 4. Audit log is created
-```
+~~~
+
+## Pagination, Search, and Filtering Design
+
+Pagination, search, and filtering are implemented at the API/query level and do not require separate database tables.
+
+Current list query behavior:
+
+~~~text
+products              -> filter by organization_id, optional search, order by created_at
+inventory_movements  -> filter by organization_id, optional movement_type, order by created_at
+orders                -> filter by organization_id, optional status, order by created_at
+audit_logs            -> filter by organization_id, optional action, order by created_at
+~~~
+
+Paginated endpoints return:
+
+~~~json
+{
+  "items": [],
+  "total": 0,
+  "page": 1,
+  "page_size": 20,
+  "pages": 0
+}
+~~~
+
+This keeps large operational datasets efficient for frontend dashboards.
 
 ## Dashboard Data Source
 
@@ -315,12 +374,12 @@ The dashboard endpoint does not use a separate table.
 
 It calculates summary data from existing tables:
 
-```text
+~~~text
 products
 orders
 inventory_movements
 audit_logs
-```
+~~~
 
 This keeps dashboard data consistent with the current database state.
 
@@ -330,26 +389,27 @@ Alembic is used to manage database schema changes.
 
 Migration files are stored in:
 
-```text
+~~~text
 backend/alembic/versions
-```
+~~~
 
 Common commands:
 
-```bash
+~~~bash
 alembic revision --autogenerate -m "migration message"
 alembic upgrade head
-```
+~~~
 
 ## Current Database Status
 
 The current database design supports:
 
-* User authentication
-* Multi-tenant organizations
-* Organization membership
-* Product management
-* Inventory movement tracking
-* Order management
-* Dashboard summaries
-* Audit logging
+- User authentication
+- Multi-tenant organizations
+- Organization membership
+- Role-based authorization
+- Product management with search and pagination
+- Inventory movement tracking with filtering and pagination
+- Order management with status filtering and pagination
+- Dashboard summaries
+- Audit logging with action filtering and pagination

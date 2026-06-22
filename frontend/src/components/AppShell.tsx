@@ -47,7 +47,10 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
       <div className="mx-auto max-w-7xl">
         <nav className="flex flex-col gap-6 border-b border-white/10 pb-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <a href="/" className="text-sm text-cyan-300 hover:text-cyan-200">
+            <a
+              href="/dashboard"
+              className="text-sm text-cyan-300 hover:text-cyan-200"
+            >
               FlowOps
             </a>
 
@@ -65,13 +68,6 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
                 {item.label}
               </a>
             ))}
-
-            <a
-              href="/"
-              className="rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
-            >
-              Home
-            </a>
 
             <button
               onClick={handleLogout}
